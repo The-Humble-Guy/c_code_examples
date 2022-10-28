@@ -1,0 +1,266 @@
+     1                                  %include "../lib.asm"
+     2                              <1>     section _text
+     3                              <1> StrToInt:
+     4 00000000 57                  <1>          push   edi
+     5 00000001 B739                <1>          mov    bh, '9'
+     6 00000003 B330                <1>          mov    bl, '0'
+     7 00000005 56                  <1>          push   esi     ; ��������� ����� �������� ������
+     8 00000006 803E2D              <1>          cmp    byte[esi], '-'
+     9 00000009 7501                <1>          jne   .prod
+    10 0000000B 46                  <1>          inc    esi     ; ���������� ����
+    11 0000000C FC                  <1> .prod    cld
+    12 0000000D 6631FF              <1>          xor    di, di  ; �������� ������� �����
+    13 00000010 AC                  <1> .cycle:  lodsb          ; ��������� ������ (�����)
+    14 00000011 3C0A                <1>          cmp    al, 10  ; ���� 10, �� �� �����
+    15 00000013 741F                <1>          je     .Return
+    16 00000015 38D8                <1>          cmp    al, bl  ; ���������� � ����� ����
+    17 00000017 722F                <1>          jb     .Error  ; "����" � ������
+    18 00000019 38F8                <1>          cmp    al, bh  ; ���������� � ����� ������ 
+    19 0000001B 772B                <1>          ja     .Error  ; "����" � ������
+    20 0000001D 2C30                <1>          sub    al, 30h ; �������� ����� �� �������
+    21 0000001F 6698                <1>          cbw            ; ��������� �� �����
+    22 00000021 6650                <1>          push   ax      ; ��������� � �����
+    23 00000023 66B80A00            <1>          mov    ax, 10  ; ������� 10 � AX
+    24 00000027 66F7E7              <1>          mul    di      ; ��������, ��������� � DX:AX
+    25 0000002A 665F                <1>          pop    di      ; � DI � ��������� �����
+    26 0000002C 6601F8              <1>          add    ax, di
+    27 0000002F 6689C7              <1>          mov    di, ax  ; � DI � ����������� �����        
+    28 00000032 EBDC                <1>          jmp    .cycle
+    29 00000034 5E                  <1> .Return: pop    esi
+    30 00000035 BB00000000          <1>          mov    ebx, 0
+    31 0000003A 803E2D              <1>          cmp    byte[esi], '-'
+    32 0000003D 7503                <1>          jne    .J
+    33 0000003F 66F7DF              <1>          neg    di
+    34 00000042 6689F8              <1> .J       mov    ax, di
+    35 00000045 98                  <1>          cwde
+    36 00000046 EB0B                <1>          jmp    .R
+    37 00000048 5E                  <1> .Error:  pop    esi
+    38 00000049 B800000000          <1>          mov    eax, 0
+    39 0000004E BB01000000          <1>          mov    ebx, 1
+    40 00000053 5F                  <1> .R       pop    edi
+    41 00000054 C3                  <1>          ret
+    42                              <1> IntToStr: 
+    43 00000055 57                  <1>          push   edi
+    44 00000056 53                  <1>          push   ebx
+    45 00000057 52                  <1>          push   edx
+    46 00000058 51                  <1>          push   ecx
+    47 00000059 56                  <1> 		 push   esi
+    48 0000005A C60600              <1> 		 mov    byte[esi],0 ; �� ����� �����
+    49 0000005D 83F800              <1>          cmp    eax,0
+    50 00000060 7D05                <1>          jge    .l1
+    51 00000062 F7D8                <1>          neg    eax
+    52 00000064 C6062D              <1>          mov    byte[esi],'-'
+    53 00000067 C646060A            <1> .l1      mov    byte[esi+6],10
+    54 0000006B BF05000000          <1>          mov    edi,5
+    55 00000070 66BB0A00            <1>          mov    bx,10
+    56 00000074 6699                <1> .again:  cwd           ; ��������� ����� �� ��������
+    57 00000076 66F7F3              <1>          div    bx     ; ����� ��������� �� 10
+    58 00000079 80C230              <1>          add    dl,30h ; �������� �� ������� ��� �����
+    59 0000007C 88143E              <1>          mov    [esi+edi],dl ; ����� ������ � ������
+    60 0000007F 4F                  <1>          dec    edi    ; ��������� ��������� ��  
+    61                              <1>                        ; ���������� �������
+    62 00000080 6683F800            <1>          cmp    ax, 0  ; ������������� ��� �����?
+    63 00000084 75EE                <1>          jne    .again
+    64 00000086 B906000000          <1>          mov    ecx, 6
+    65 0000008B 29F9                <1>          sub    ecx, edi ; ����� ����������+����
+    66 0000008D 89C8                <1> 		 mov    eax,ecx
+    67 0000008F 40                  <1> 		 inc    eax      ; ����� ����������+0�
+    68 00000090 46                  <1>          inc    esi      ; ���������� ����
+    69 00000091 56                  <1> 		 push   esi
+    70 00000092 8D343E              <1>          lea    esi,[esi+edi] ; ������ ����������
+    71 00000095 5F                  <1> 		 pop    edi
+    72 00000096 F3A4                <1>          rep movsb
+    73 00000098 5E                  <1>          pop    esi  
+    74 00000099 59                  <1>          pop    ecx
+    75 0000009A 5A                  <1>          pop    edx
+    76 0000009B 5B                  <1>          pop    ebx
+    77 0000009C 5F                  <1>          pop    edi
+    78 0000009D C3                  <1>          ret
+     2                                  
+     3                                  %macro PRINT 2
+     4                                      mov eax, 4
+     5                                      mov ebx, 1
+     6                                      mov ecx, %1
+     7                                      mov edx, %2
+     8                                      int 80h
+     9                                  %endmacro
+    10                                  
+    11                                  %macro SCAN 2
+    12                                      mov eax, 3
+    13                                      mov ebx, 0
+    14                                      mov ecx, %1
+    15                                      mov edx, %2
+    16                                      int 80h
+    17                                  %endmacro
+    18                                  
+    19                                  section .data
+    20 00000000 496E7075742076616C-     helloMsg db "Input values of 'q' and 'd': ", 10
+    20 00000009 756573206F66202771-
+    20 00000012 2720616E6420276427-
+    20 0000001B 3A200A             
+    21                                  lenHello equ $-helloMsg
+    22                                  
+    23 0000001E 526573756C743A200A      resultMsg db "Result: ", 10
+    24                                  lenResult equ $-resultMsg
+    25                                  
+    26 00000027 507265737320456E74-     exitMsg db "Press Enter to Exit", 10
+    26 00000030 657220746F20457869-
+    26 00000039 740A               
+    27                                  lenExit equ $-exitMsg
+    28                                  
+    29 0000003B 4572726F7221205A65-     errorMsg db "Error! Zero division. Please enter new values", 10
+    29 00000044 726F20646976697369-
+    29 0000004D 6F6E2E20506C656173-
+    29 00000056 6520656E746572206E-
+    29 0000005F 65772076616C756573-
+    29 00000068 0A                 
+    30                                  lenError equ $-errorMsg
+    31                                  
+    32 00000069 4572726F722120556E-     convErrorMsg db "Error! Uncorrect input. Please try again", 10
+    32 00000072 636F72726563742069-
+    32 0000007B 6E7075742E20506C65-
+    32 00000084 617365207472792061-
+    32 0000008D 6761696E0A         
+    33                                  lenConvError equ $-convErrorMsg
+    34                                  
+    35                                  
+    36                                  section .bss
+    37 00000000 ????                    q resw 1
+    38 00000002 ????                    d resw 1
+    39 00000004 ????                    f resw 1
+    40 00000006 ??????????????          input resb 7
+    41                                  leninput equ $-input
+    42 0000000D <res Ah>                output resb 10
+    43                                  
+    44                                  section .text
+    45                                  global _start
+    46                                  _start:
+    47                                              ;SHOW HELLO MESSAGE
+    48                                              PRINT helloMsg, lenHello
+     4 00000000 B804000000          <1>  mov eax, 4
+     5 00000005 BB01000000          <1>  mov ebx, 1
+     6 0000000A B9[00000000]        <1>  mov ecx, %1
+     7 0000000F BA1E000000          <1>  mov edx, %2
+     8 00000014 CD80                <1>  int 80h
+    49                                              ;ENTER VALUES AND STORAGE
+    50                                  EnterQ:
+    51                                              SCAN input, leninput
+    12 00000016 B803000000          <1>  mov eax, 3
+    13 0000001B BB00000000          <1>  mov ebx, 0
+    14 00000020 B9[06000000]        <1>  mov ecx, %1
+    15 00000025 BA07000000          <1>  mov edx, %2
+    16 0000002A CD80                <1>  int 80h
+    52 0000002C BE[06000000]                        mov esi, input
+    53 00000031 E8(00000000)                        call StrToInt
+    54 00000036 83FB00                              cmp ebx, 0
+    55 00000039 7508                                jne ErrorAtQ
+    56 0000003B 66A3[00000000]                      mov [q], ax
+    57 00000041 EB18                                jmp EnterD
+    58                                  
+    59                                  ErrorAtQ:
+    60                                              PRINT convErrorMsg, lenConvError
+     4 00000043 B804000000          <1>  mov eax, 4
+     5 00000048 BB01000000          <1>  mov ebx, 1
+     6 0000004D B9[69000000]        <1>  mov ecx, %1
+     7 00000052 BA29000000          <1>  mov edx, %2
+     8 00000057 CD80                <1>  int 80h
+    61 00000059 EBBB                                jmp EnterQ
+    62                                  
+    63                                  EnterD:
+    64                                              SCAN input, leninput
+    12 0000005B B803000000          <1>  mov eax, 3
+    13 00000060 BB00000000          <1>  mov ebx, 0
+    14 00000065 B9[06000000]        <1>  mov ecx, %1
+    15 0000006A BA07000000          <1>  mov edx, %2
+    16 0000006F CD80                <1>  int 80h
+    65 00000071 BE[06000000]                        mov esi, input
+    66 00000076 E8(00000000)                        call StrToInt
+    67 0000007B 83FB00                              cmp ebx, 0
+    68 0000007E 7508                                jne ErrorAtD
+    69 00000080 66A3[02000000]                      mov [d], ax
+    70 00000086 EB18                                jmp Calculate
+    71                                  ErrorAtD:
+    72                                      
+    73                                              PRINT convErrorMsg, lenConvError
+     4 00000088 B804000000          <1>  mov eax, 4
+     5 0000008D BB01000000          <1>  mov ebx, 1
+     6 00000092 B9[69000000]        <1>  mov ecx, %1
+     7 00000097 BA29000000          <1>  mov edx, %2
+     8 0000009C CD80                <1>  int 80h
+    74 0000009E EBBB                                jmp EnterD
+    75                                  
+    76                                  Calculate:
+    77                                              ;CALCULATE
+    78 000000A0 66833D[00000000]0A                  cmp word [q], 10
+    79 000000A8 7818                                js else                                 ;if signed => reult q-10 < 0
+    80 000000AA 66A1[02000000]                      mov ax, [d]                             ;AX = d
+    81 000000B0 662B05[00000000]                    sub ax, [q]                             ;AX = d-q
+    82 000000B7 66BB0500                            mov bx, 5                               ;BX = 5
+    83 000000BB 6699                                cwd
+    84 000000BD 66F7EB                              imul bx                                 ;AX = AX * BX = (d - q) * 5
+    85 000000C0 EB4B                                jmp save_result
+    86                                  
+    87                                  else:
+    88 000000C2 66A1[02000000]                      mov ax, [d]
+    89 000000C8 6683F805                            cmp ax, 5
+    90 000000CC 7402                                jz Error                                ;error if d - 5 == 0
+    91 000000CE EB1B                                jmp Continue
+    92                                  
+    93                                  Error:
+    94                                              PRINT errorMsg, lenError
+     4 000000D0 B804000000          <1>  mov eax, 4
+     5 000000D5 BB01000000          <1>  mov ebx, 1
+     6 000000DA B9[3B000000]        <1>  mov ecx, %1
+     7 000000DF BA2E000000          <1>  mov edx, %2
+     8 000000E4 CD80                <1>  int 80h
+    95 000000E6 E92BFFFFFF                          jmp EnterQ
+    96                                  
+    97                                  Continue:
+    98 000000EB 66A1[00000000]                      mov ax, [q]                             ;AX = q
+    99 000000F1 66F7E8                              imul ax                                 ;AX = q * q
+   100 000000F4 6699                                cwd
+   101 000000F6 668B1D[02000000]                    mov bx, [d]                             ;BX = d
+   102 000000FD 6683EB05                            sub bx, 5                               ;BX = d - 5
+   103 00000101 66F7FB                              idiv bx                                 ;AX = (q * q) // (d -5)
+   104 00000104 6699                                cwd
+   105 00000106 660305[02000000]                    add ax, [d]                             ;AX = (q * q) // (d - 5) + d
+   106                                  
+   107                                  save_result:
+   108 0000010D 66A3[04000000]                      mov [f], ax
+   109                                              ;VIEW RESULT
+   110                                              PRINT resultMsg, lenResult
+     4 00000113 B804000000          <1>  mov eax, 4
+     5 00000118 BB01000000          <1>  mov ebx, 1
+     6 0000011D B9[1E000000]        <1>  mov ecx, %1
+     7 00000122 BA09000000          <1>  mov edx, %2
+     8 00000127 CD80                <1>  int 80h
+   111                                      
+   112 00000129 BE[0D000000]                        mov esi, output
+   113 0000012E 66A1[04000000]                      mov ax, [f]
+   114 00000134 98                                  cwde
+   115 00000135 E8(55000000)                        call IntToStr                           ; lenght in eax, start at [esi]
+   116                                              PRINT esi, eax
+     4 0000013A B804000000          <1>  mov eax, 4
+     5 0000013F BB01000000          <1>  mov ebx, 1
+     6 00000144 89F1                <1>  mov ecx, %1
+     7 00000146 89C2                <1>  mov edx, %2
+     8 00000148 CD80                <1>  int 80h
+   117                                  
+   118                                              ;SHOW EXIT MESSAGE
+   119                                              PRINT exitMsg, lenExit
+     4 0000014A B804000000          <1>  mov eax, 4
+     5 0000014F BB01000000          <1>  mov ebx, 1
+     6 00000154 B9[27000000]        <1>  mov ecx, %1
+     7 00000159 BA14000000          <1>  mov edx, %2
+     8 0000015E CD80                <1>  int 80h
+   120                                              SCAN input, leninput
+    12 00000160 B803000000          <1>  mov eax, 3
+    13 00000165 BB00000000          <1>  mov ebx, 0
+    14 0000016A B9[06000000]        <1>  mov ecx, %1
+    15 0000016F BA07000000          <1>  mov edx, %2
+    16 00000174 CD80                <1>  int 80h
+   121                                  
+   122                                              ;syscall for exit
+   123 00000176 B801000000                          mov eax, 1
+   124 0000017B 31DB                                xor ebx, ebx
+   125 0000017D CD80                                int 80h

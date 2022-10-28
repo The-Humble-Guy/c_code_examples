@@ -1,0 +1,499 @@
+     1                                  %include "my_lib.asm"
+     2                              <1> %define arg(n) ebp+(4*n)+8
+     3                              <1> %define local(n) ebp-(4*n)
+     4                              <1> 
+     5                              <1> ;push parameters into function in reverse order (push last param, ..., push
+     6                              <1> ;first param)
+     7                              <1> 
+     8                              <1> %macro DwordToStr 3; DwordToStr value, string, len_string
+     9                              <1>     push dword 1
+    10                              <1>     push dword %3
+    11                              <1>     push dword %2
+    12                              <1>     push dword %1
+    13                              <1>     call NumToStr
+    14                              <1>     add esp, 12
+    15                              <1> %endmacro
+    16                              <1> 
+    17                              <1> %macro WordToStr 3; WordToStr value, string, len_string
+    18                              <1>     push eax;save previous EAX
+    19                              <1>     push dword 1
+    20                              <1>     push dword %3
+    21                              <1>     push dword %2
+    22                              <1>     mov ax, word %1;convert word to dword
+    23                              <1>     cwde
+    24                              <1>     push eax
+    25                              <1>     call NumToStr
+    26                              <1>     pop eax;restore previous EAX
+    27                              <1>     add esp, 12
+    28                              <1> %endmacro
+    29                              <1> 
+    30                              <1> %macro ByteToStr 3; ByteToStr value, string, len_string
+    31                              <1>     push eax
+    32                              <1>     push dword 1
+    33                              <1>     push dword %3
+    34                              <1>     push dword %2
+    35                              <1>     mov al, byte %1
+    36                              <1>     cbw
+    37                              <1>     cwde
+    38                              <1>     push eax
+    39                              <1>     call NumToStr
+    40                              <1>     pop eax
+    41                              <1>     add esp, 12
+    42                              <1> %endmacro
+    43                              <1> 
+    44                              <1> ;push dword lenOutput
+    45                              <1> 
+    46                              <1> 
+    47                              <1> %macro ArrToStr 5
+    48                              <1>     push %5
+    49                              <1>     push %4
+    50                              <1>     push %3
+    51                              <1>     push %2
+    52                              <1>     push %1
+    53                              <1>     call AToStr
+    54                              <1>     add esp, 20
+    55                              <1> %endmacro
+    56                              <1> 
+    57                              <1> 
+    58                              <1> %macro PRINT 2
+    59                              <1>     mov eax, 4
+    60                              <1>     mov ebx, 1
+    61                              <1>     mov ecx, %1
+    62                              <1>     mov edx, %2
+    63                              <1>     int 80h
+    64                              <1> %endmacro
+    65                              <1> 
+    66                              <1> %macro SCAN 2
+    67                              <1>     mov eax, 3
+    68                              <1>     mov ebx, 0
+    69                              <1>     mov ecx, %1
+    70                              <1>     mov edx, %2
+    71                              <1>     int 80h
+    72                              <1> %endmacro
+    73                              <1> 
+    74                              <1> section .text
+    75                              <1> 
+    76                              <1> IToStr:
+    77                              <1>                 ;USE CDECL CONVENSION
+    78 00000000 57                  <1>                 push edi
+    79 00000001 55                  <1>                 push ebp
+    80 00000002 89E5                <1>                 mov ebp, esp
+    81                              <1> 
+    82 00000004 31C0                <1>                 xor eax, eax
+    83 00000006 31D2                <1>                 xor edx, edx;result number
+    84 00000008 31C9                <1>                 xor ecx, ecx
+    85                              <1>                 ;mov esi, input
+    86 0000000A BB0A000000          <1>                 mov ebx, 10
+    87                              <1> 
+    88                              <1> .remove_spaces:
+    89 0000000F AC                  <1>                 lodsb
+    90 00000010 3C20                <1>                 cmp al, 32
+    91 00000012 74FB                <1>                 je .remove_spaces
+    92                              <1> 
+    93 00000014 3C2D                <1>                 cmp al, '-'
+    94 00000016 7402                <1>                 je .save_minus
+    95 00000018 EB08                <1>                 jmp .cycle
+    96                              <1> .save_minus:
+    97 0000001A 660FBEC0            <1>                 movsx ax, al
+    98 0000001E 98                  <1>                 cwde
+    99 0000001F 89C1                <1>                 mov ecx, eax
+   100 00000021 AC                  <1>                 lodsb
+   101                              <1> .cycle:
+   102 00000022 3C0A                <1>                 cmp al, 10
+   103 00000024 7424                <1>                 je .prod
+   104 00000026 3C20                <1>                 cmp al, 32
+   105 00000028 7420                <1>                 je .prod
+   106                              <1>             
+   107 0000002A 660FBEC0            <1>                 movsx ax, al
+   108 0000002E 98                  <1>                 cwde
+   109 0000002F 83E830              <1>                 sub eax, 48
+   110 00000032 7828                <1>                 js .error
+   111 00000034 83F809              <1>                 cmp eax, 9
+   112 00000037 7723                <1>                 ja .error
+   113 00000039 89C7                <1>                 mov edi, eax;digit in edi
+   114 0000003B 89D0                <1>                 mov eax, edx;current num
+   115 0000003D F7EB                <1>                 imul ebx
+   116 0000003F 701B                <1>                 jo .error
+   117 00000041 01F8                <1>                 add eax, edi
+   118 00000043 7217                <1>                 jc .error
+   119 00000045 89C2                <1>                 mov edx, eax
+   120 00000047 AC                  <1>                 lodsb
+   121 00000048 EBD8                <1>                 jmp .cycle
+   122                              <1> .prod:
+   123 0000004A 83F92D              <1>                 cmp ecx, '-'
+   124 0000004D 7402                <1>                 je .negative
+   125 0000004F EB02                <1>                 jmp .end
+   126                              <1> .negative:
+   127 00000051 F7DA                <1>                 neg edx
+   128                              <1> .end:       
+   129 00000053 89D0                <1>                 mov eax, edx
+   130 00000055 BB00000000          <1>                 mov ebx, 0
+   131 0000005A EB0A                <1>                 jmp .fini
+   132                              <1> .error:
+   133 0000005C B800000000          <1>                 mov eax, 0
+   134 00000061 BB01000000          <1>                 mov ebx, 1
+   135                              <1> .fini:
+   136                              <1> 
+   137 00000066 89EC                <1>                 mov esp, ebp
+   138 00000068 5D                  <1>                 pop ebp
+   139 00000069 5F                  <1>                 pop edi
+   140 0000006A C3                  <1>                 ret
+   141                              <1> 
+   142                              <1> AToStr:
+   143                              <1>                 ;USE CDECL CONVENSION
+   144                              <1>                 ;INIT
+   145 0000006B 57                  <1>                 push edi
+   146 0000006C 55                  <1>                 push ebp
+   147 0000006D 89E5                <1>                 mov ebp, esp
+   148 0000006F 83EC08              <1>                 sub esp, 8
+   149                              <1>                 ;params:
+   150                              <1>                 ;   arg(1) - array address
+   151                              <1>                 ;   arg(2) - count of numbers in string
+   152                              <1>                 ;   arg(3) - dimensity of number (1, 2 or 4 bytes)
+   153                              <1>                 ;   arg(4) - string address
+   154                              <1>                 ;   arg(5) - lenght of string
+   155                              <1>                 ;local variables:
+   156                              <1>                 ;   local(1) - precision of single number
+   157                              <1> 
+   158 00000072 8B451C              <1>                 mov eax, dword [arg(5)]
+   159 00000075 48                  <1>                 dec eax
+   160 00000076 034518              <1>                 add eax, [arg(4)]
+   161 00000079 C6000A              <1>                 mov byte [eax], 10                                  ;type enter symbol at the end of string
+   162 0000007C 8B451C              <1>                 mov eax, dword [arg(5)]
+   163 0000007F 48                  <1>                 dec eax
+   164 00000080 8B4D10              <1>                 mov ecx, dword [arg(2)]                             ;ECX as counter for loop
+   165 00000083 99                  <1>                 cdq
+   166 00000084 F7F9                <1>                 idiv ecx                                            ;EAX contains precision of single number
+   167 00000086 8945FC              <1>                 mov [local(1)], eax                                 ;use local(1) as precision of single number
+   168 00000089 8B5518              <1>                 mov edx, [arg(4)]                                   ;EDX contain string address
+   169 0000008C 8955F8              <1>                 mov [local(2)], edx                                 ;local(2) for string adress
+   170                              <1> 
+   171                              <1> .cycle:
+   172 0000008F 49                  <1>                 dec ecx
+   173 00000090 51                  <1>                 push ecx                                            ;NumToStr will rewrite ECX, so need to save current value of ECX
+   174                              <1> 
+   175 00000091 6A00                <1>                 push dword 0
+   176 00000093 FF75FC              <1>                 push dword [local(1)]                               ;push number of bytes for 1 integer
+   177                              <1> 
+   178 00000096 89C8                <1>                 mov eax, ecx                                        ;EAX = ECX
+   179 00000098 F76DFC              <1>                 imul dword [local(1)]                               ;Result in EAX:EDX; EAX = ECX*precision -start point
+   180 0000009B 034518              <1>                 add eax, [arg(4)]                                   ;EAX=ECX*precision + adrress of string
+   181                              <1> 
+   182 0000009E 50                  <1>                 push dword eax                                      ;push address to write number
+   183                              <1> 
+   184 0000009F 89C8                <1>                 mov eax, ecx                                        ;number of element
+   185 000000A1 F76D14              <1>                 imul dword [arg(3)]                                 ;imul position number on displacement
+   186 000000A4 03450C              <1>                 add eax, [arg(1)]                                   ;EAX contain the address of element in array
+   187                              <1> 
+   188 000000A7 837D1404            <1>                 cmp dword [arg(3)], 4                               ;find way to correctly push value of element
+   189 000000AB 7418                <1>                 je .case_4                                          ;is value dword?
+   190                              <1> 
+   191 000000AD 837D1402            <1>                 cmp dword [arg(3)], 2                               ;is value word?
+   192 000000B1 740D                <1>                 je .case_2
+   193                              <1> 
+   194 000000B3 837D1401            <1>                 cmp dword [arg(3)], 1                               ;is value byte?
+   195 000000B7 7400                <1>                 je .case_1
+   196                              <1> .case_1:
+   197 000000B9 660FBE00            <1>                 movsx ax, byte [eax]
+   198 000000BD 98                  <1>                 cwde
+   199 000000BE EB09                <1>                 jmp .push_eax
+   200                              <1> .case_2:
+   201 000000C0 0FBF00              <1>                 movsx eax, word [eax]
+   202 000000C3 EB04                <1>                 jmp .push_eax
+   203                              <1> .case_4:
+   204 000000C5 8B00                <1>                 mov eax, dword [eax]
+   205 000000C7 EB00                <1>                 jmp .push_eax
+   206                              <1> .push_eax:
+   207 000000C9 50                  <1>                 push dword eax                                      ;push value of element of array
+   208 000000CA E80E000000          <1>                 call NumToStr
+   209 000000CF 83C410              <1>                 add esp, 16
+   210                              <1> 
+   211 000000D2 59                  <1>                 pop ecx                                             ;recover correct number of iteration
+   212                              <1>                 
+   213 000000D3 83F900              <1>                 cmp ecx, 0                                          ;while non zero
+   214 000000D6 75B7                <1>                 jne .cycle
+   215                              <1> 
+   216                              <1>                 ;FINI
+   217 000000D8 89EC                <1>                 mov esp, ebp
+   218 000000DA 5D                  <1>                 pop ebp
+   219 000000DB 5F                  <1>                 pop edi
+   220 000000DC C3                  <1>                 ret
+   221                              <1> 
+   222                              <1> 
+   223                              <1> NumToStr:
+   224                              <1>                 ;USE CDECL convension
+   225                              <1>                 ;INIT
+   226 000000DD 57                  <1>                 push edi
+   227 000000DE 55                  <1>                 push ebp
+   228 000000DF 89E5                <1>                 mov ebp, esp
+   229 000000E1 83EC10              <1>                 sub esp, 16
+   230                              <1>                 
+   231                              <1>                 ;params:
+   232                              <1>                 ;   arg(1) - number to convert
+   233                              <1>                 ;   arg(2) - address of string
+   234                              <1>                 ;   arg(3) - length of string
+   235                              <1>                 ;   arg(4) - need to add '10' symbol at the end (bool)
+   236                              <1>                 ;local variables:
+   237                              <1>                 ;   local(1) - used as sign flag of number
+   238                              <1>                 ;   local(2) - base of number system
+   239 000000E4 8B450C              <1>                 mov eax, dword [arg(1)]                     ;put integer into register
+   240 000000E7 C745FC00000000      <1>                 mov dword [local(1)], 0                     ;use for pos(0) or neg(1) number (in flag purpose)
+   241 000000EE C745F80A000000      <1>                 mov dword [local(2)], 10                    ;base of number system
+   242 000000F5 8B7D10              <1>                 mov edi, [arg(2)]                           ;save output string address
+   243 000000F8 B900000000          <1>                 mov ecx, 0
+   244 000000FD 83F800              <1>                 cmp eax, 0                                  ;if EAX<0 need to save '-' and after negative EAX
+   245 00000100 7C02                <1>                 jl .minus
+   246 00000102 EB09                <1>                 jmp .continue
+   247                              <1> .minus:
+   248 00000104 C745FC01000000      <1>                 mov dword [local(1)], 1                     ;save that EAX is negative
+   249 0000010B F7D8                <1>                 neg eax
+   250                              <1> .continue:
+   251 0000010D 034D14              <1>                 add ecx, dword [arg(3)]                     ;number of digit for output including enter-character
+   252 00000110 837D1801            <1>                 cmp dword [arg(4)], 1
+   253 00000114 7402                <1>                 je .add_enter
+   254 00000116 EB05                <1>                 jmp .define_digits
+   255                              <1> .add_enter:
+   256 00000118 49                  <1>                 dec ecx
+   257 00000119 C6040F0A            <1>                 mov byte [edi+ecx], 10                      ;enter-byte at the end of string
+   258                              <1> .define_digits:
+   259 0000011D 49                  <1>                 dec ecx
+   260 0000011E 99                  <1>                 cdq
+   261 0000011F F77DF8              <1>                 idiv dword [local(2)]                       ;result in AX:DX, so digit in DX
+   262 00000122 80C230              <1>                 add dl, 48                                  ;convert digit to ASCII-code
+   263 00000125 88140F              <1>                 mov byte [edi+ecx], dl                      ;write digit 
+   264 00000128 99                  <1>                 cdq
+   265 00000129 83F800              <1>                 cmp eax, 0                                  ;while EAX != 0 define digits
+   266 0000012C 75EF                <1>                 jne .define_digits
+   267                              <1>     
+   268 0000012E 837DFC01            <1>                 cmp dword [local(1)], 1                     ;EAX is negative ?
+   269 00000132 7407                <1>                 je .add_minus
+   270 00000134 83F900              <1>                 cmp ecx, 0
+   271 00000137 750E                <1>                 jne .spaces
+   272 00000139 EB18                <1>                 jmp .fini
+   273                              <1> .add_minus:
+   274 0000013B 49                  <1>                 dec ecx
+   275 0000013C C6040F2D            <1>                 mov byte [edi+ecx], "-"                     ;write '-' before number
+   276 00000140 83F900              <1>                 cmp ecx, 0
+   277 00000143 7502                <1>                 jne .spaces
+   278 00000145 EB0C                <1>                 jmp .fini
+   279                              <1> .spaces:
+   280 00000147 49                  <1>                 dec ecx
+   281 00000148 C6040F20            <1>                 mov byte [edi+ecx], 32                      ;add spaces before number
+   282 0000014C 83F900              <1>                 cmp ecx, 0
+   283 0000014F 75F6                <1>                 jne .spaces
+   284 00000151 EB00                <1>                 jmp .fini
+   285                              <1>                 ;FINI
+   286                              <1> .fini:
+   287 00000153 89EC                <1>                 mov esp, ebp
+   288 00000155 5D                  <1>                 pop ebp
+   289 00000156 5F                  <1>                 pop edi
+   290 00000157 C3                  <1>                 ret
+   291                              <1> 
+   292                              <1> 
+     2                                  %define M       7
+     3                                  %define N       4
+     4                                  %define sizeof  2
+     5                                  
+     6                                  section .data
+     7 00000000 496E70757420377834-     helloMsg db "Input 7x4 matrix string by string: ", 10
+     7 00000009 206D61747269782073-
+     7 00000012 7472696E6720627920-
+     7 0000001B 737472696E673A200A 
+     8                                  lenHello equ $-helloMsg
+     9                                  
+    10 00000024 596F7520696E707574-     enterMsg db "You input the next values: ", 10
+    10 0000002D 20746865206E657874-
+    10 00000036 2076616C7565733A20-
+    10 0000003F 0A                 
+    11                                  lenEnter equ $-enterMsg
+    12                                  
+    13 00000040 5472616E73706F7365-     resultMsg db "Transpose matrix: ", 10
+    13 00000049 206D61747269783A20-
+    13 00000052 0A                 
+    14                                  lenResult equ $-resultMsg
+    15                                  
+    16                                  
+    17 00000053 507265737320456E74-     exitMsg db "Press Enter to Exit", 10
+    17 0000005C 657220746F20457869-
+    17 00000065 740A               
+    18                                  lenExit equ $-exitMsg
+    19                                  
+    20                                  
+    21                                  section .bss
+    22 00000000 <res 73h>               input resb 115
+    23                                  lenInput equ $-input
+    24                                  
+    25 00000073 <res 46h>               output resb 70
+    26                                  lenOutput equ $-output
+    27                                  
+    28 000000B9 <res 38h>               A resw M*N
+    29 000000F1 <res 38h>               B resw N*M
+    30                                  
+    31                                  
+    32                                  section .text
+    33                                  global _start
+    34                                  _start:
+    35                                              PRINT helloMsg, lenHello
+    59 00000158 B804000000          <1>  mov eax, 4
+    60 0000015D BB01000000          <1>  mov ebx, 1
+    61 00000162 B9[00000000]        <1>  mov ecx, %1
+    62 00000167 BA24000000          <1>  mov edx, %2
+    63 0000016C CD80                <1>  int 80h
+    36                                              ;INPUT MATRIX
+    37 0000016E B900000000                          mov ecx, 0;ECX as row counter
+    38                                  .global_cycle:
+    39 00000173 51                                  push ecx
+    40                                              SCAN input, lenInput;input string
+    67 00000174 B803000000          <1>  mov eax, 3
+    68 00000179 BB00000000          <1>  mov ebx, 0
+    69 0000017E B9[00000000]        <1>  mov ecx, %1
+    70 00000183 BA73000000          <1>  mov edx, %2
+    71 00000188 CD80                <1>  int 80h
+    41 0000018A BE[00000000]                        mov esi, input;load adress of string in esi
+    42 0000018F BF00000000                          mov edi, 0;EDI as column counter
+    43 00000194 59                                  pop ecx
+    44                                  .cycle:
+    45 00000195 51                                  push ecx;save ECX
+    46 00000196 E865FEFFFF                          call IToStr;result in EAX
+    47 0000019B 59                                  pop ecx;restore ECX
+    48 0000019C 57                                  push edi
+    49 0000019D 50                                  push eax
+    50                                  ;calculate offset in array
+    51 0000019E B808000000                          mov eax, N*sizeof;A[i,j]=A+j*sizeof_row+i*sizeof
+    52 000001A3 F7E9                                imul ecx
+    53 000001A5 99                                  cdq
+    54 000001A6 89C3                                mov ebx, eax
+    55 000001A8 B802000000                          mov eax, sizeof
+    56 000001AD F7EF                                imul edi
+    57 000001AF 99                                  cdq
+    58 000001B0 01D8                                add eax, ebx
+    59 000001B2 89C7                                mov edi, eax
+    60                                              
+    61 000001B4 58                                  pop eax
+    62 000001B5 668987[B9000000]                    mov [A+edi], ax;storage value at the same position
+    63 000001BC 5F                                  pop edi
+    64 000001BD 47                                  inc edi
+    65 000001BE 83FF04                              cmp edi, N
+    66 000001C1 75D2                                jne .cycle;while EDI != N
+    67                                              
+    68 000001C3 46                                  inc esi
+    69 000001C4 41                                  inc ecx
+    70 000001C5 83F907                              cmp ecx, M
+    71 000001C8 75A9                                jne .global_cycle;while ESI != M
+    72                                  
+    73                                              ;TRANSPOSE
+    74                                              ;the same logic
+    75                                              ;need to correctly save offset in array A and B
+    76 000001CA B900000000                          mov ecx, 0;i
+    77                                  .transpose:
+    78 000001CF BF00000000                          mov edi, 0;j
+    79                                  .transpose_cycle:
+    80 000001D4 B808000000                          mov eax, N*sizeof
+    81 000001D9 F7EF                                imul edi
+    82 000001DB 99                                  cdq
+    83 000001DC 89C3                                mov ebx, eax
+    84 000001DE B802000000                          mov eax, sizeof
+    85 000001E3 F7E9                                imul ecx
+    86 000001E5 99                                  cdq
+    87 000001E6 01D8                                add eax, ebx;Adress the element in array A
+    88 000001E8 05[B9000000]                        add eax, A
+    89 000001ED 668B00                              mov ax, word [eax]
+    90 000001F0 98                                  cwde;A element in eax
+    91 000001F1 50                                  push eax;push value
+    92                                  
+    93 000001F2 B80E000000                          mov eax, M*sizeof
+    94 000001F7 F7E9                                imul ecx
+    95 000001F9 99                                  cdq
+    96 000001FA 89C3                                mov ebx, eax
+    97 000001FC B802000000                          mov eax, sizeof
+    98 00000201 F7EF                                imul edi
+    99 00000203 99                                  cdq
+   100 00000204 01D8                                add eax, ebx
+   101 00000206 05[F1000000]                        add eax, B
+   102 0000020B 5B                                  pop ebx;pop value
+   103 0000020C 668918                              mov word [eax], bx;and storage
+   104                                  
+   105 0000020F 47                                  inc edi
+   106 00000210 83FF07                              cmp edi, M
+   107 00000213 75BF                                jne .transpose_cycle
+   108                                              
+   109 00000215 41                                  inc ecx
+   110 00000216 83F904                              cmp ecx, N
+   111 00000219 75B4                                jne .transpose
+   112                                  
+   113 0000021B B80E000000                          mov eax, M*sizeof
+   114 00000220 F7E9                                imul ecx
+   115 00000222 99                                  cdq
+   116 00000223 89C3                                mov ebx, eax
+   117                                  
+   118                                              ;VIEW INPUT ARRAY
+   119                                              PRINT enterMsg, lenEnter
+    59 00000225 B804000000          <1>  mov eax, 4
+    60 0000022A BB01000000          <1>  mov ebx, 1
+    61 0000022F B9[24000000]        <1>  mov ecx, %1
+    62 00000234 BA1C000000          <1>  mov edx, %2
+    63 00000239 CD80                <1>  int 80h
+   120 0000023B B900000000                          mov ecx, 0
+   121                                  .enter_cycle:
+   122 00000240 B802000000                          mov eax, sizeof
+   123 00000245 F7E9                                imul ecx
+   124 00000247 05[B9000000]                        add eax, A;calculate offset
+   125 0000024C 51                                  push ecx
+   126                                              ArrToStr eax, N, sizeof, input, lenInput
+    48 0000024D 6A73                <1>  push %5
+    49 0000024F 68[00000000]        <1>  push %4
+    50 00000254 6A02                <1>  push %3
+    51 00000256 6A04                <1>  push %2
+    52 00000258 50                  <1>  push %1
+    53 00000259 E80DFEFFFF          <1>  call AToStr
+    54 0000025E 83C414              <1>  add esp, 20
+   127                                              PRINT input, lenInput
+    59 00000261 B804000000          <1>  mov eax, 4
+    60 00000266 BB01000000          <1>  mov ebx, 1
+    61 0000026B B9[00000000]        <1>  mov ecx, %1
+    62 00000270 BA73000000          <1>  mov edx, %2
+    63 00000275 CD80                <1>  int 80h
+   128                                  
+   129 00000277 59                                  pop ecx
+   130 00000278 83C104                              add ecx, N
+   131 0000027B 83F91C                              cmp ecx, N*M
+   132 0000027E 75C0                                jne .enter_cycle
+   133                                  
+   134                                              ;VIEW TRANSPOSE MATRIX
+   135                                              PRINT resultMsg, lenResult
+    59 00000280 B804000000          <1>  mov eax, 4
+    60 00000285 BB01000000          <1>  mov ebx, 1
+    61 0000028A B9[40000000]        <1>  mov ecx, %1
+    62 0000028F BA13000000          <1>  mov edx, %2
+    63 00000294 CD80                <1>  int 80h
+   136 00000296 B900000000                          mov ecx, 0
+   137                                  .result_cycle:
+   138 0000029B B802000000                          mov eax, sizeof
+   139 000002A0 F7E9                                imul ecx
+   140 000002A2 05[F1000000]                        add eax, B;calculate offset
+   141 000002A7 51                                  push ecx
+   142                                              ArrToStr eax, M, sizeof, output, lenOutput
+    48 000002A8 6A46                <1>  push %5
+    49 000002AA 68[73000000]        <1>  push %4
+    50 000002AF 6A02                <1>  push %3
+    51 000002B1 6A07                <1>  push %2
+    52 000002B3 50                  <1>  push %1
+    53 000002B4 E8B2FDFFFF          <1>  call AToStr
+    54 000002B9 83C414              <1>  add esp, 20
+   143                                              PRINT output, lenOutput
+    59 000002BC B804000000          <1>  mov eax, 4
+    60 000002C1 BB01000000          <1>  mov ebx, 1
+    61 000002C6 B9[73000000]        <1>  mov ecx, %1
+    62 000002CB BA46000000          <1>  mov edx, %2
+    63 000002D0 CD80                <1>  int 80h
+   144                                  
+   145 000002D2 59                                  pop ecx
+   146 000002D3 83C107                              add ecx, M
+   147 000002D6 83F91C                              cmp ecx, N*M
+   148 000002D9 75C0                                jne .result_cycle
+   149                                  
+   150                                              ;SYSCALL FOR EXIT
+   151 000002DB B801000000                          mov eax, 1
+   152 000002E0 31DB                                xor ebx, ebx
+   153 000002E2 CD80                                int 80h
+   154                                  
